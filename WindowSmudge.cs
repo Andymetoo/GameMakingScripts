@@ -49,15 +49,35 @@ public class WindowSmudge : MonoBehaviour
 
     private void FadeSmudge()
     {
-        Color color = smudgeMaterial.color;
-        color.a -= randomizedFadeSpeed * Time.deltaTime; // Decrease alpha value
-        smudgeMaterial.color = color;
+        // Fade the main smudge
+        Color smudgeColor = smudgeMaterial.color;
+        smudgeColor.a -= randomizedFadeSpeed * Time.deltaTime; // Decrease alpha value
+        smudgeMaterial.color = smudgeColor;
 
-        if (color.a <= 0)
+        // Fade the wet effect
+        if (wetEffect != null)
+        {
+            Renderer wetRenderer = wetEffect.GetComponent<Renderer>();
+            if (wetRenderer != null)
+            {
+                Material wetMaterial = wetRenderer.material;
+                Color wetColor = wetMaterial.color;
+                wetColor.a -= randomizedFadeSpeed * Time.deltaTime; // Decrease alpha value
+                wetMaterial.color = wetColor;
+            }
+        }
+
+        // Check if the smudge is fully faded
+        if (smudgeColor.a <= 0)
         {
             Destroy(gameObject); // Destroy or deactivate the smudge when fully faded
+            if (wetEffect != null)
+            {
+                Destroy(wetEffect); // Optionally, you can destroy the wet effect object as well
+            }
         }
     }
+
 
         public void MakeWet()
     {

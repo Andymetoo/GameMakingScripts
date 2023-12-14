@@ -27,10 +27,15 @@ public class DirtSmudge : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetMouseButton(0) && isBeingSwept && ToolSwitcher.ActiveToolIndex == 0)
+        if (IsActionButtonHeld() && isBeingSwept && ToolSwitcher.ActiveToolIndex == 0)
         {
             FadeSmudge();
         }
+    }
+
+    private bool IsActionButtonHeld()
+    {
+        return Input.GetMouseButton(0) || Input.GetKey(KeyCode.E);
     }
 
     private void FadeSmudge()

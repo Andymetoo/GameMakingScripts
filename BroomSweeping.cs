@@ -17,11 +17,11 @@ public class BroomSweeping : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && ToolSwitcher.ActiveToolIndex != 1 && ToolSwitcher.ActiveToolIndex != 3) //These are the tools that will NOT bob when mouse is held down.
+        if (IsActionKeyPressed() && ToolSwitcher.ActiveToolIndex != 1 && ToolSwitcher.ActiveToolIndex != 3) //These are the tools that will NOT bob when mouse is held down.
         {
             isSweeping = true;
         }
-        if (Input.GetMouseButtonUp(0))
+        if (IsActionKeyReleased())
         {
             isSweeping = false;
             broomTransform.localPosition = originalLocalPosition; // Reset position
@@ -32,6 +32,16 @@ public class BroomSweeping : MonoBehaviour
             SweepMotion();
             CheckForDirt();
         }
+    }
+
+    private bool IsActionKeyPressed()
+    {
+        return Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.E);
+    }
+
+    private bool IsActionKeyReleased()
+    {
+        return Input.GetMouseButtonUp(0) || Input.GetKeyUp(KeyCode.E);
     }
 
     void SweepMotion()
