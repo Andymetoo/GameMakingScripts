@@ -8,7 +8,8 @@ public class ToolActions : MonoBehaviour
         Broom,
         SprayBottle,
         Cloth,
-        HandGrabber
+        HandGrabber,
+        WateringCan
     }
 
     [SerializeField] private ToolType currentTool = ToolType.None;
@@ -16,6 +17,7 @@ public class ToolActions : MonoBehaviour
     [SerializeField] private LayerMask smudgeLayer; // Layer for the smudges
     [SerializeField] private ParticleSystem primarySprayParticles;
     [SerializeField] private ParticleSystem secondarySprayParticles;
+    [SerializeField] private ParticleSystem waterParticleSystem;
 
     private GameObject heldItem = null; 
     private Animator handAnimator;
@@ -46,12 +48,32 @@ public class ToolActions : MonoBehaviour
             case ToolType.HandGrabber:
                 HandGrabberAction();
                 break;
+            case ToolType.WateringCan:
+                WateringCanAction();
+                break;
         }
         if (currentTool == ToolType.Cloth)
             {
                 ClothAction();
             }
+            
     }
+
+    private bool IsActionKeyPressed()
+    {
+        return Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.E);
+    }
+
+    private bool IsActionKeyReleased()
+    {
+        return Input.GetMouseButtonUp(0) || Input.GetKeyUp(KeyCode.E);
+    }
+
+    private bool IsActionButtonHeld()
+{
+    return Input.GetMouseButton(0) || Input.GetKey(KeyCode.E);
+}
+
 
     void BroomAction()
     {
@@ -60,7 +82,7 @@ public class ToolActions : MonoBehaviour
 
     void SprayAction()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (IsActionKeyPressed())
         {
             PlayParticleSystem(primarySprayParticles);
             PlayParticleSystem(secondarySprayParticles);
@@ -100,44 +122,22 @@ public class ToolActions : MonoBehaviour
     }
 
     void ClothAction()
-{
-    if (Input.GetMouseButtonDown(0))
     {
-        isClothActive = true; // Start cloth action
-    }
-    else if (Input.GetMouseButtonUp(0))
-    {
-        isClothActive = false; // Stop cloth action
-    }
-
-    if (isClothActive)
-    {
-        PerformClothRaycast();
-    }
-}
-
-    /* void ClothAction()
-    {
-        if (Input.GetMouseButtonDown(0))
+        if (IsActionKeyPressed())
         {
-            Vector3 rayOrigin = toolTransform.position + new Vector3(0, 0, 0f); // Adjust the offset
-            Vector3 rayDirection = -toolTransform.forward;
-            float rayLength = 1f; // Same as the raycast length
-
-            // Draw the ray for debugging
-            Debug.DrawRay(rayOrigin, rayDirection * rayLength, Color.green, 1f);
-
-            RaycastHit hit;
-            if (Physics.Raycast(rayOrigin, rayDirection, out hit, rayLength, smudgeLayer))
-            {
-                WindowSmudge smudge = hit.collider.GetComponent<WindowSmudge>();
-                if (smudge != null && smudge.IsWet)
-                {
-                    smudge.StartSweeping();
-                }
-            }
+            isClothActive = true; // Start cloth action
         }
-    } */
+        else if (IsActionKeyReleased())
+        {
+            isClothActive = false; // Stop cloth action
+        }
+
+        if (isClothActive)
+        {
+            PerformClothRaycast();
+        }
+    }
+
 
     void PerformClothRaycast()
     {
@@ -163,28 +163,45 @@ public class ToolActions : MonoBehaviour
 
     void HandGrabberAction()
     {
-        if (Input.GetMouseButtonDown(0) && heldItem == null && potentialPickupItem != null)
+        // Check if the player is currently interacting with a bed
+        BedInteraction bed = potentialPickupItem?.GetComponent<BedInteraction>();
+        
+        if (IsActionButtonHeld())
         {
-            // Pick up the item when mouse button is pressed down
-            PickUpItem(potentialPickupItem);
-            if (handAnimator != null)
-                handAnimator.Play("Hand", -1, 0f); // Play hand grabbing animation
+            if (bed != null)
+            {
+                // Start making the bed only if the potential pickup item is a bed
+                bed.StartMaking();
+            }
+            else if (heldItem == null && potentialPickupItem != null && potentialPickupItem.CompareTag("Trash"))
+            {
+                // If it's not a bed and we're not holding an item, try to pick up trash
+                PickUpItem(potentialPickupItem);
+            }
         }
-
-        if (Input.GetMouseButtonUp(0) && heldItem != null)
+        else
         {
-            // Drop the item when mouse button is released
-            DropTrash();
-            if (handAnimator != null)
-                handAnimator.Play("Hand", -1, 1f); // Play hand opening animation in reverse
+            if (bed != null)
+            {
+                // Stop making the bed if the action button is released
+                bed.StopMaking();
+            }
+            else if (heldItem != null)
+            {
+                // If we're not making a bed and holding an item, drop the trash
+                DropTrash();
+            }
         }
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (currentTool == ToolType.HandGrabber && other.CompareTag("Trash"))
+        if (currentTool == ToolType.HandGrabber)
         {
-            potentialPickupItem = other.gameObject; // Mark as potential pickup item
+            if (other.CompareTag("Trash") || other.CompareTag("Bed"))
+            {
+                potentialPickupItem = other.gameObject;
+            }
         }
     }
 
@@ -192,9 +209,10 @@ public class ToolActions : MonoBehaviour
     {
         if (currentTool == ToolType.HandGrabber && other.gameObject == potentialPickupItem)
         {
-            potentialPickupItem = null; // Clear the potential pickup item
+            potentialPickupItem = null;
         }
     }
+
 
     void PickUpItem(GameObject item)
     {
@@ -239,6 +257,32 @@ public class ToolActions : MonoBehaviour
         }
     }
 
+    void WateringCanAction() 
+    {
+        if (IsActionButtonHeld()) 
+        {
+
+            // Start playing water particle system
+            if (waterParticleSystem != null) // Check if waterParticleSystem is assigned
+            {
+                waterParticleSystem.Play();
+                PerformWateringRaycasts();
+                Debug.Log("Watering can is on.");
+            }
+        } 
+        else 
+        {
+            // Stop playing water particle system
+            if (waterParticleSystem != null) // Check if waterParticleSystem is assigned
+            {
+                waterParticleSystem.Stop();
+            }
+        }
+    }
+
+    void PerformWateringRaycasts() {
+    // Similar to SprayWater() but checking for plants
+    }
 
     private void PlayParticleSystem(ParticleSystem ps)
     {
