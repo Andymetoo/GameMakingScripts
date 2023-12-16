@@ -1,28 +1,32 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
 public class ToolSwitcher : MonoBehaviour
 {
+    public static int ActiveToolIndex { get; private set; } = -1; // -1 means no tool is active
     public GameObject[] tools;
+    [SerializeField] private float timeToMove = 0.5f;
     private GameObject currentTool;
-    private Vector3 toolUsePosition = new Vector3(0.19f, 0.54f, 0.84f); // Relative to the tool's current position
-    private Vector3 toolHidePosition = new Vector3(0.19f, -1.00f, 0.84f); // Relative to the tool's current position
+    public bool isSwitching = false;
 
     void Start()
     {
         foreach (GameObject tool in tools)
         {
-            tool.transform.localPosition = toolHidePosition;
+            tool.transform.localPosition = new Vector3(0.19f, -1.00f, 0.84f);
             tool.SetActive(false);
         }
     }
 
     void Update()
     {
+        if (isSwitching) return;
+
         for (int i = 0; i < tools.Length; i++)
         {
             KeyCode keyToCheck = KeyCode.Alpha1 + i;
-            if (i == 9) keyToCheck = KeyCode.Alpha0; // Special case for 10th tool
+            if (i == 9) keyToCheck = KeyCode.Alpha0;
 
             if (Input.GetKeyDown(keyToCheck))
             {
@@ -33,26 +37,30 @@ public class ToolSwitcher : MonoBehaviour
 
     IEnumerator SwitchTool(GameObject newTool)
     {
+        isSwitching = true;
+
         if (currentTool != null)
         {
-            yield return MoveTool(currentTool, toolHidePosition);
+            yield return MoveTool(currentTool, new Vector3(0.19f, -1.00f, 0.84f));
             currentTool.SetActive(false);
         }
 
         newTool.SetActive(true);
-        yield return MoveTool(newTool, toolUsePosition);
+        yield return MoveTool(newTool, new Vector3(0.19f, 0.54f, 0.84f));
         currentTool = newTool;
+        ActiveToolIndex = Array.IndexOf(tools, newTool);
+
+        isSwitching = false;
     }
 
     IEnumerator MoveTool(GameObject tool, Vector3 targetPosition)
     {
-        float timeToMove = 0.5f; // Time to move the tool
         float elapsedTime = 0;
         Vector3 startPosition = tool.transform.localPosition;
 
         while (elapsedTime < timeToMove)
         {
-            tool.transform.localPosition = Vector3.Lerp(startPosition, targetPosition, (elapsedTime / timeToMove));
+            tool.transform.localPosition = Vector3.Lerp(startPosition, targetPosition, elapsedTime / timeToMove);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
