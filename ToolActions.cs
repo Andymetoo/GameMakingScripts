@@ -29,6 +29,8 @@ public class ToolActions : MonoBehaviour
     [SerializeField] private GameObject sink; // Assign sink object in the inspector
     [SerializeField] private ParticleSystem sinkParticleSystem; // Assign sink particle system
     [SerializeField] private ToolSwitcher toolSwitcher;
+    [SerializeField] private Slider plantWateringSlider;
+
 
 
     private GameObject heldItem = null; 
@@ -37,7 +39,7 @@ public class ToolActions : MonoBehaviour
     private GameObject potentialPickupItem = null; // New field to store potential item for pickup
     private float currentWaterLevel;
     private bool isLookingAtSink = false;
-    private float wateringCanCooldown = 0.5f; // Cooldown time in seconds
+    private float wateringCanCooldown = 1.2f; // Cooldown time in seconds
     private float currentCooldownTimer = 0f;
 
     void Start()
@@ -53,6 +55,14 @@ public class ToolActions : MonoBehaviour
         waterLevelSlider.value = currentWaterLevel;
 
         toolSwitcher = FindObjectOfType<ToolSwitcher>();
+
+        plantWateringSlider.gameObject.SetActive(false);
+
+        Plant[] plants = FindObjectsOfType<Plant>();
+        foreach (var plant in plants)
+        {
+            plant.OnWateringBarDeactivationNeeded += NotifyWateringBarDeactivation;
+        }
     }
 
     void Update()
@@ -95,6 +105,15 @@ public class ToolActions : MonoBehaviour
             currentCooldownTimer -= Time.deltaTime;
         }
 
+
+        if (currentTool == ToolType.WateringCan)
+        {
+            float angle = Vector3.Angle(toolTransform.forward, Vector3.down);
+            if (angle <= 70 && !toolSwitcher.isSwitching && currentCooldownTimer <= 0 && currentWaterLevel > 0)
+            {
+                PerformWateringRaycasts();
+            }
+        }
             
     }
 
@@ -326,7 +345,7 @@ public class ToolActions : MonoBehaviour
     {
          if (currentTool == ToolType.WateringCan && toolSwitcher != null && !toolSwitcher.isSwitching)
         {
-            if (waterParticleSystem.isPlaying)
+            if (waterParticleSystem.isPlaying && currentCooldownTimer <= 0)
             {
                 currentWaterLevel -= waterUsageRate * Time.deltaTime;
                 waterLevelSlider.value = currentWaterLevel;
@@ -416,30 +435,81 @@ private bool IsAtSink()
     }
 
 
-    void PerformWateringRaycasts() {
-    // Similar to SprayWater() but checking for plants
+    void PerformWateringRaycasts()
+    {
+        if (currentTool != ToolType.WateringCan) return;
+
+        Vector3 rayOriginOffset = new Vector3(0, 0, -0.8f); // Adjust this offset as needed
+        Vector3 rayOrigin = toolTransform.position + toolTransform.TransformDirection(rayOriginOffset);
+        Vector3 rayDirection = toolTransform.forward;
+        float rayLength = 3f; // Adjust the ray length as needed
+
+        // Draw the ray for debugging
+        Debug.DrawRay(rayOrigin, rayDirection * rayLength, Color.green, 3f);
+        Debug.Log("Watering can ray is casting.");
+
+        RaycastHit hit;
+        if (Physics.Raycast(rayOrigin, rayDirection, out hit, rayLength))
+        {
+            Plant plant = hit.collider.GetComponent<Plant>();
+            if (plant != null)
+            {
+                plant.WaterPlant(Time.deltaTime); // Water the plant incrementally
+                UpdatePlantWateringSlider(plant); // Activate watering bar here
+            }
+        }
+        else
+        {
+            plantWateringSlider.gameObject.SetActive(false); // Hide slider if not pointing at a plant
+        }
+    }
+
+        public void NotifyWateringBarDeactivation()
+    {
+        // This method is called from the Plant script when the timer reaches zero
+        plantWateringSlider.gameObject.SetActive(false);
+    }
+
+
+    void UpdatePlantWateringSlider(Plant plant)
+    {
+        plantWateringSlider.gameObject.SetActive(true);
+        plantWateringSlider.value = plant.GetWaterLevelPercentage();
+    }
+
+    void OnDestroy()
+    {
+        Plant[] plants = FindObjectsOfType<Plant>();
+        foreach (var plant in plants)
+        {
+            plant.OnWateringBarDeactivationNeeded -= NotifyWateringBarDeactivation;
+        }
     }
 
     void AdjustWaterFlowBasedOnToolAngle()
     {
+        // Ensure that the watering can doesn't act while switching tools.
         if (toolSwitcher != null && toolSwitcher.isSwitching)
-        {   
-            //Debug.Log("isSwitching is true.");
-            return; // Skip if a tool switch is in progress
+        {
+            if (waterParticleSystem.isPlaying)
+            {
+                waterParticleSystem.Stop();
+            }
+            return;
         }
 
+        // If the cooldown timer is still running, don't start the water particle system.
         if (currentCooldownTimer > 0)
         {
-            waterUsageRate = 0;
-        }
-
-        if (currentCooldownTimer <= 0)
-        {
-            waterUsageRate = 20;
+            currentCooldownTimer -= Time.deltaTime;
+            if (waterParticleSystem.isPlaying)
+            {
+                waterParticleSystem.Stop();
+            }
+            return;
         }
 
         float angle = Vector3.Angle(toolTransform.forward, Vector3.down);
-
         float invertedNormalizedAngle = 1 - Mathf.Clamp01(angle / 90f);
 
         var mainModule = waterParticleSystem.main;
@@ -448,17 +518,18 @@ private bool IsAtSink()
         var emissionModule = waterParticleSystem.emission;
         emissionModule.rateOverTime = Mathf.Lerp(minEmissionRate, maxEmissionRate, invertedNormalizedAngle);
 
-        if (angle <= 70 && !waterParticleSystem.isPlaying && currentWaterLevel > 0 && !isLookingAtSink && toolSwitcher.isSwitching == false && currentCooldownTimer <= 0)
+        // Control the water particle system based on the angle and water level.
+        if (angle <= 70 && !waterParticleSystem.isPlaying && currentWaterLevel > 0 && !isLookingAtSink && currentCooldownTimer <= 0)
         {
-            //waterLevelSlider.gameObject.SetActive(true);
             waterParticleSystem.Play();
         }
         else if (angle > 70 && waterParticleSystem.isPlaying || currentWaterLevel <= 0)
         {
-            //waterLevelSlider.gameObject.SetActive(false);
             waterParticleSystem.Stop();
         }
     }
+
+
 
     private void PlayParticleSystem(ParticleSystem ps)
     {

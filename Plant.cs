@@ -1,45 +1,63 @@
 using UnityEngine;
+using System;
 
 public class Plant : MonoBehaviour
 {
-    private bool isBeingWatered = false;
-    private float waterAmount = 0f;
-    private const float MAX_WATER = 1f; // Maximum water needed
+    public GameObject deadPlant;
+    public GameObject livingPlant;
+    public float waterLevel = 0f;
+    public float maxWaterLevel = 3f;
+    private float lastWateredTimer = 2f; // Timer for how long the bar stays visible
+        public event Action OnWateringBarDeactivationNeeded;
+
+    private bool isAlive = false;
+
+    void Start()
+    {
+        // Initialize plant state
+        UpdatePlantState();
+    }
 
     void Update()
     {
-        if (isBeingWatered)
+        if (lastWateredTimer > 0)
         {
+            lastWateredTimer -= Time.deltaTime;
+            if (lastWateredTimer <= 0)
+            {
+                OnWateringBarDeactivationNeeded?.Invoke(); // Trigger the event
+            }
+        }
+    }
+
+    public void WaterPlant(float amount)
+    {
+        waterLevel += amount;
+        waterLevel = Mathf.Clamp(waterLevel, 0, maxWaterLevel);
+        lastWateredTimer = 2f; // Reset the timer
+
+        if (waterLevel >= maxWaterLevel)
+        {
+            // Logic to switch to the living plant model
+            Debug.Log("Plant is fully watered");
             WaterPlant();
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    public float GetWaterLevelPercentage()
     {
-        if (other.CompareTag("Water")) // Assuming your water particles have the tag "Water"
-        {
-            isBeingWatered = true;
-        }
+        return waterLevel / maxWaterLevel;
     }
 
-    private void OnTriggerExit(Collider other)
+    public void WaterPlant()
     {
-        if (other.CompareTag("Water"))
-        {
-            isBeingWatered = false;
-        }
+        isAlive = true;
+        UpdatePlantState();
     }
 
-    void WaterPlant()
+    private void UpdatePlantState()
     {
-        if (waterAmount < MAX_WATER)
-        {
-            waterAmount += Time.deltaTime; // Increase water amount over time
-            // Update any UI element or visual feedback for watering progress
-        }
-        else
-        {
-            // Plant is fully watered - you can trigger any effect or change here
-        }
+        deadPlant.SetActive(!isAlive);
+        livingPlant.SetActive(isAlive);
     }
 }
