@@ -450,36 +450,32 @@ private bool IsAtSink()
         Debug.Log("Watering can ray is casting.");
 
         RaycastHit hit;
-        if (Physics.Raycast(rayOrigin, rayDirection, out hit, rayLength))
-        {
-            Plant plant = hit.collider.GetComponent<Plant>();
-            if (plant != null)
-            {
-                plant.WaterPlant(Time.deltaTime); // Water the plant incrementally
-                UpdatePlantWateringSlider(plant); // Activate watering bar here
+        if (Physics.Raycast(rayOrigin, rayDirection, out hit, rayLength)) {
+                Plant plant = hit.collider.GetComponent<Plant>();
+                if (plant != null) {
+                    plant.WaterPlant(Time.deltaTime); // Water the plant incrementally
+                    UpdatePlantWateringSlider(plant); // Ensure this is called correctly
+                }
             }
         }
-        else
+
+            public void NotifyWateringBarDeactivation()
         {
-            plantWateringSlider.gameObject.SetActive(false); // Hide slider if not pointing at a plant
+            // This method is called from the Plant script when the timer reaches zero
+            plantWateringSlider.gameObject.SetActive(false);
         }
 
-         if (plant != null && plant.waterLevel >= plant.maxWaterLevel) {
-            room.UpdateCompletionUI(); // Update room completion when plant is fully watered
+    private void UpdateRoomCompletion(Plant plant) {
+    Room room = plant.GetComponentInParent<Room>(); // Find the room the plant belongs to
+    if (room != null) {
+        room.UpdateCompletionUI(); // Update room completion
+    }
+}
+    void UpdatePlantWateringSlider(Plant plant) {
+        if (plantWateringSlider != null) {
+            plantWateringSlider.gameObject.SetActive(true);
+            plantWateringSlider.value = plant.GetWaterLevelPercentage();
         }
-    }
-
-        public void NotifyWateringBarDeactivation()
-    {
-        // This method is called from the Plant script when the timer reaches zero
-        plantWateringSlider.gameObject.SetActive(false);
-    }
-
-
-    void UpdatePlantWateringSlider(Plant plant)
-    {
-        plantWateringSlider.gameObject.SetActive(true);
-        plantWateringSlider.value = plant.GetWaterLevelPercentage();
     }
 
     void OnDestroy()
