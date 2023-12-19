@@ -8,7 +8,8 @@ public class Plant : MonoBehaviour
     public float waterLevel = 0f;
     public float maxWaterLevel = 3f;
     private float lastWateredTimer = 2f; // Timer for how long the bar stays visible
-        public event Action OnWateringBarDeactivationNeeded;
+    public event Action OnWateringBarDeactivationNeeded;
+    public Room room; // Assign this in the inspector
 
     private bool isAlive = false;
 
@@ -42,6 +43,8 @@ public class Plant : MonoBehaviour
             Debug.Log("Plant is fully watered");
             WaterPlant();
         }
+
+        room.UpdateCompletionUI(); // Update room completion when plant is watered
     }
 
     public float GetWaterLevelPercentage()

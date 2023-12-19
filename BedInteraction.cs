@@ -11,6 +11,7 @@ public class BedInteraction : MonoBehaviour
     private float makeTime = 3f; // Time to make the bed
     private bool isMakingBed = false; // Flag to track if bed is being made
     private float interactionDistance = 3f; // Maximum distance to interact with the bed
+    public Room room; // Assign this in the inspector
 
     void Start()
     {
@@ -41,6 +42,7 @@ public class BedInteraction : MonoBehaviour
             }
         }
     }
+    
 
     public void StartMaking()
     {
@@ -68,6 +70,7 @@ public class BedInteraction : MonoBehaviour
         progressBar.gameObject.SetActive(false);
         progress = 0f;
         isMakingBed = false;
+        room.UpdateCompletionUI(); // Update room completion
     }
 
     private bool IsWithinInteractionRange()

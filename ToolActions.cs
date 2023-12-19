@@ -41,6 +41,7 @@ public class ToolActions : MonoBehaviour
     private bool isLookingAtSink = false;
     private float wateringCanCooldown = 1.2f; // Cooldown time in seconds
     private float currentCooldownTimer = 0f;
+    public Room room; // Assign this in the inspector
 
     void Start()
     {
@@ -461,6 +462,10 @@ private bool IsAtSink()
         else
         {
             plantWateringSlider.gameObject.SetActive(false); // Hide slider if not pointing at a plant
+        }
+
+         if (plant != null && plant.waterLevel >= plant.maxWaterLevel) {
+            room.UpdateCompletionUI(); // Update room completion when plant is fully watered
         }
     }
 
