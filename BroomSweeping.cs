@@ -53,7 +53,7 @@ public class BroomSweeping : MonoBehaviour
     void CheckForDirt()
     {
         RaycastHit hit;
-        if (Physics.Raycast(broomTransform.position, broomTransform.forward, out hit, 1f, dirtLayer))
+        if (Physics.Raycast(broomTransform.position, broomTransform.forward, out hit, 2f, dirtLayer))
         {
             DirtSmudge dirtSmudge = hit.collider.GetComponent<DirtSmudge>();
             if (dirtSmudge != null)

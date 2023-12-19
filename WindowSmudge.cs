@@ -8,6 +8,7 @@ public class WindowSmudge : MonoBehaviour
     private bool isBeingSwept = false;
     private bool isWet = false;
     private GameObject wetEffect; // Declare the wetEffect variable
+    private Task taskComponent; // Reference to the Task component
 
     public bool IsWet
     {
@@ -37,6 +38,8 @@ public class WindowSmudge : MonoBehaviour
         {
             wetEffect.SetActive(false); // Initially deactivate the wet effect
         }
+
+        taskComponent = GetComponentInParent<Task>(); // Get the Task component
     }
 
     void Update()
@@ -70,11 +73,18 @@ public class WindowSmudge : MonoBehaviour
         // Check if the smudge is fully faded
         if (smudgeColor.a <= 0)
         {
-            Destroy(gameObject); // Destroy or deactivate the smudge when fully faded
-            if (wetEffect != null)
+            if (taskComponent != null)
             {
-                Destroy(wetEffect); // Optionally, you can destroy the wet effect object as well
+                taskComponent.isActive = false; // Update task status
+
+                Room room = taskComponent.GetComponentInParent<Room>(); // Get the Room component
+                if (room != null)
+                {
+                    room.UpdateCompletionUI(); // Update room completion
+                }
             }
+
+            Destroy(gameObject);
         }
     }
 

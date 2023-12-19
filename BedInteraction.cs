@@ -12,6 +12,7 @@ public class BedInteraction : MonoBehaviour
     private bool isMakingBed = false; // Flag to track if bed is being made
     private float interactionDistance = 3f; // Maximum distance to interact with the bed
     public Room room; // Assign this in the inspector
+    private Task taskComponent; // Reference to the Task component
 
     void Start()
     {
@@ -19,6 +20,8 @@ public class BedInteraction : MonoBehaviour
         progressBar.minValue = 0f;
         progressBar.maxValue = makeTime;
         progressBar.value = 0f;
+
+        taskComponent = GetComponent<Task>(); // Get the Task component
     }
 
     void Update()
@@ -70,7 +73,15 @@ public class BedInteraction : MonoBehaviour
         progressBar.gameObject.SetActive(false);
         progress = 0f;
         isMakingBed = false;
-        room.UpdateCompletionUI(); // Update room completion
+
+        if (taskComponent != null)
+        {
+            taskComponent.isActive = false; // Update task status
+        }
+        if (room != null)
+        {
+            room.UpdateCompletionUI(); // Update room completion
+        }
     }
 
     private bool IsWithinInteractionRange()

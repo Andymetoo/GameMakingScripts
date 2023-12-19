@@ -4,8 +4,11 @@ public class DirtSmudge : MonoBehaviour
 {
     private Material smudgeMaterial;
     [SerializeField] private float fadeSpeed = 1f; // Base fade speed
+    [SerializeField] private float shrinkSpeed = 0.1f; // Adjust the speed of shrinking
+
     private float randomizedFadeSpeed; // Actual fade speed after randomization
     private bool isBeingSwept = false;
+    private Task taskComponent; // Reference to the Task component
 
     void Start()
     {
@@ -23,6 +26,8 @@ public class DirtSmudge : MonoBehaviour
 
         // Randomize fade speed
         randomizedFadeSpeed = fadeSpeed * Random.Range(0.5f, 1.5f);
+        taskComponent = GetComponentInParent<Task>(); // Adjust based on your hierarchy
+
     }
 
     void Update()
@@ -40,13 +45,23 @@ public class DirtSmudge : MonoBehaviour
 
     private void FadeSmudge()
     {
-        Color color = smudgeMaterial.color;
-        color.a -= randomizedFadeSpeed * Time.deltaTime; // Decrease alpha value
-        smudgeMaterial.color = color;
+        transform.localScale -= new Vector3(shrinkSpeed, 0, shrinkSpeed) * Time.deltaTime;
 
-        if (color.a <= 0)
+        // Check if the smudge has shrunk enough to be considered gone
+        if (transform.localScale.x <= 0.05f && transform.localScale.z <= 0.05f)
         {
-            Destroy(gameObject); // Destroy or deactivate the smudge when fully faded
+            if (taskComponent != null)
+            {
+                taskComponent.isActive = false; // Update task status
+
+                Room room = taskComponent.GetComponentInParent<Room>(); // Get the Room component
+                if (room != null)
+                {
+                    room.UpdateCompletionUI(); // Update room completion
+                }
+            }
+
+            Destroy(gameObject);
         }
     }
 

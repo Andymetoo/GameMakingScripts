@@ -34,6 +34,13 @@ public class Plant : MonoBehaviour {
 
         if (waterLevel >= maxWaterLevel) {
             WaterPlant();
+            if (room != null) {
+                room.UpdateCompletionUI(); // Update when the plant is fully watered
+            }
+            var taskComponent = GetComponent<Task>();
+            if (taskComponent != null) {
+            taskComponent.isActive = false;
+        }
         }
 
         // Update the completion UI and watering slider

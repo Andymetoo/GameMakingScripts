@@ -52,24 +52,24 @@ public class Room : MonoBehaviour {
     }
 
     public void UpdateCompletionUI() {
-        int totalTasks = smudges.Count + dirtPiles.Count + plants.Count + trash.Count + bed.Count; // Include bed tasks
+        int totalTasks = smudges.Count + dirtPiles.Count + plants.Count + trash.Count + bed.Count;
         int completedTasks = CountCompletedTasks();
 
         float completionPercentage = (float)completedTasks / totalTasks;
-
-        // Update the UI element
         if (completionSlider != null) {
             completionSlider.value = completionPercentage;
         }
+        Debug.Log($"Room completion updated: {completionPercentage * 100}%");
     }
 
     private int CountCompletedTasks() {
         int completedCount = 0;
+        // Check if the task is not active, meaning it's completed
         completedCount += smudges.Count(task => !task.isActive);
         completedCount += dirtPiles.Count(task => !task.isActive);
         completedCount += plants.Count(task => !task.isActive);
         completedCount += trash.Count(task => !task.isActive);
-        completedCount += bed.Count(task => !task.isActive); // Include bed tasks
+        completedCount += bed.Count(task => !task.isActive);
         return completedCount;
     }
 }

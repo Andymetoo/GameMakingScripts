@@ -2,7 +2,9 @@ using UnityEngine;
 
 public class TrashItem : MonoBehaviour
 {
-    [SerializeField] private int pointsValue = 10;
+    //[SerializeField] private int pointsValue = 10;
+    private Task taskComponent; // Reference to the Task component
+    public Room room; // Assign this in the inspector
 
     void Start()
     {
@@ -17,22 +19,27 @@ public class TrashItem : MonoBehaviour
             currentScale.y * Random.Range(1f, 1.2f), // Randomize Y scale
             currentScale.z * Random.Range(1f, 1.2f)  // Randomize Z scale
         );
+
+        taskComponent = GetComponent<Task>(); // Get the Task component
     }
 
     public void Dispose()
     {
-        // Add points to the player's score
-        //ScoreManager.AddPoints(pointsValue);
+        if (taskComponent != null)
+        {
+            taskComponent.isActive = false; // Update task status
+        }
 
-        // Play any disposal effects (sound, animation, etc.)
-        PlayDisposalEffects();
+        if (room != null)
+        {
+            room.UpdateCompletionUI(); // Update room completion
+        }
 
-        // Destroy or deactivate the trash object
         Destroy(gameObject);
     }
 
-    private void PlayDisposalEffects()
+    /*private void PlayDisposalEffects()
     {
         // Implement any visual or audio effects for disposing of the trash
-    }
+    }*/
 }
