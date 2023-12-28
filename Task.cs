@@ -6,9 +6,9 @@ public class Task : MonoBehaviour {
     public TaskType taskType;
     public bool isActive = false;
 
-    // For Plant and Bed tasks, assign these in the inspector
-    public GameObject activeModel; // E.g., wilted plant, disheveled bed
-    public GameObject inactiveModel; // E.g., healthy plant, made bed
+    // For Bed tasks, assign these in the inspector
+    public GameObject[] unmadeModels; // Array for multiple unmade bed models
+    public GameObject madeModel; // Single made bed model
 
     void Start() {
         Debug.Log($"Initializing task: {taskType}, isActive: {isActive}");
@@ -33,16 +33,23 @@ public class Task : MonoBehaviour {
     }
 
     void SetPlantAppearance(bool needsWatering) {
-        if (activeModel != null && inactiveModel != null) {
-            activeModel.SetActive(needsWatering);
-            inactiveModel.SetActive(!needsWatering);
-        }
+        // Plant appearance logic...
     }
 
     void SetBedAppearance(bool needsMaking) {
-        if (activeModel != null && inactiveModel != null) {
-            activeModel.SetActive(needsMaking);
-            inactiveModel.SetActive(!needsMaking);
+        if (unmadeModels != null && madeModel != null) {
+            // Deactivate all unmade models first
+            foreach (var unmadeModel in unmadeModels) {
+                unmadeModel.SetActive(false);
+            }
+
+            // Activate one random unmade model or the made model
+            if (needsMaking) {
+                int randomIndex = Random.Range(0, unmadeModels.Length);
+                unmadeModels[randomIndex].SetActive(true);
+            } else {
+                madeModel.SetActive(true);
+            }
         }
     }
 }

@@ -30,6 +30,7 @@ public class ToolActions : MonoBehaviour
     [SerializeField] private ParticleSystem sinkParticleSystem; // Assign sink particle system
     [SerializeField] private ToolSwitcher toolSwitcher;
     [SerializeField] private Slider plantWateringSlider;
+    [SerializeField] private ParticleSystem broomSweepParticles; // Reference to the broom's particle system
 
 
 
@@ -136,7 +137,25 @@ public class ToolActions : MonoBehaviour
 
     void BroomAction()
     {
-        // Implement broom functionality
+                if (IsActionButtonHeld() && currentTool == ToolType.Broom)
+        {
+            // Activate the particle system when the broom is in use
+            if (!broomSweepParticles.isPlaying)
+            {
+                broomSweepParticles.Play();
+            }
+
+            // Implement the logic for broom sweeping here
+            // ...
+        }
+        else
+        {
+            // Stop the particle system when the broom is not in use
+            if (broomSweepParticles.isPlaying)
+            {
+                broomSweepParticles.Stop();
+            }
+        }
     }
 
     void SprayAction()
@@ -222,36 +241,50 @@ public class ToolActions : MonoBehaviour
 
     void HandGrabberAction()
     {
-        // Check if the player is currently interacting with a bed
         BedInteraction bed = potentialPickupItem?.GetComponent<BedInteraction>();
-        
+        FurnitureInteraction furniture = potentialPickupItem?.GetComponent<FurnitureInteraction>(); 
+
         if (IsActionButtonHeld())
         {
             if (bed != null)
             {
-                // Start making the bed only if the potential pickup item is a bed
                 bed.StartMaking();
+            }
+            else if (furniture != null)
+            {
+                furniture.FixFurniture();
             }
             else if (heldItem == null && potentialPickupItem != null && potentialPickupItem.CompareTag("Trash"))
             {
-                // If it's not a bed and we're not holding an item, try to pick up trash
-                PickUpItem(potentialPickupItem);
+                // Check if the potential pickup item still exists and is not being destroyed
+                if (potentialPickupItem != null && potentialPickupItem.activeInHierarchy)
+                {
+                    TrashItem trashItem = potentialPickupItem.GetComponent<TrashItem>();
+                    if (trashItem != null && trashItem.IsPickupAllowed())
+                    {
+                        PickUpItem(potentialPickupItem);
+                    }
+                }
             }
         }
         else
         {
             if (bed != null)
             {
-                // Stop making the bed if the action button is released
                 bed.StopMaking();
+            }
+            else if (furniture != null)
+            {
+                furniture.StopFixing();
             }
             else if (heldItem != null)
             {
-                // If we're not making a bed and holding an item, drop the trash
                 DropTrash();
             }
         }
     }
+
+
 
     void OnTriggerEnter(Collider other)
     {
@@ -290,8 +323,22 @@ public class ToolActions : MonoBehaviour
         {
             col.enabled = false; // Disable collider to prevent pushing
         }
+
+        TrashItem trashItem = item.GetComponent<TrashItem>();
+        if (trashItem != null)
+        {
+            trashItem.OnDisposal += HandleTrashDisposal;
+        }
     }
 
+    void HandleTrashDisposal()
+    {
+        if (heldItem != null)
+        {
+            heldItem = null;
+            potentialPickupItem = null;
+        }
+    }
 
 
     void DropTrash()
@@ -299,7 +346,7 @@ public class ToolActions : MonoBehaviour
         if (heldItem != null)
         {
             Rigidbody rb = heldItem.GetComponent<Rigidbody>();
-            Collider col = heldItem.GetComponent<Collider>(); // Get the collider
+            Collider col = heldItem.GetComponent<Collider>();
 
             if (rb != null)
             {
@@ -310,11 +357,23 @@ public class ToolActions : MonoBehaviour
                 col.enabled = true; // Re-enable the collider
             }
 
+                    // Unsubscribe from the OnDisposal event
+            TrashItem trashItem = heldItem.GetComponent<TrashItem>();
+            if (trashItem != null)
+            {
+                trashItem.Drop(); // Start the pickup cooldown
+            }
+
             heldItem.transform.SetParent(null); // Release the item
+
+            // Nullify the heldItem reference to avoid accessing it after destruction
             heldItem = null;
-            potentialPickupItem = null; // Reset potential item for pickup
         }
-    }
+
+    // Also nullify potentialPickupItem to avoid dangling references
+    potentialPickupItem = null;
+}
+
 
     /*void WateringCanAction() 
     {
