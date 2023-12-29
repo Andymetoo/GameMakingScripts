@@ -7,8 +7,11 @@ public class TrashItem : MonoBehaviour
     private Task taskComponent; // Reference to the Task component
     public Room room; // Assign this in the inspector
     public event Action OnDisposal;
-    private float pickupCooldown = 1.0f; // Cooldown duration in seconds
+    private float pickupCooldown = 2.0f; // Cooldown duration in seconds
     private float currentCooldown;
+    private bool isBeingDisposed = false;
+    public bool IsHeld { get; set; } = false;
+
 
     void Start()
     {
@@ -48,7 +51,11 @@ public class TrashItem : MonoBehaviour
 
     public void Dispose()
     {
+        if (isBeingDisposed || IsHeld) return; // Avoid multiple disposal calls
         
+        isBeingDisposed = true;
+        gameObject.SetActive(false); // Immediately deactivate
+
         OnDisposal?.Invoke();
 
         if (taskComponent != null)

@@ -116,7 +116,11 @@ public class ToolActions : MonoBehaviour
                 PerformWateringRaycasts();
             }
         }
-            
+
+        if (potentialPickupItem != null && !potentialPickupItem.activeInHierarchy)
+        {
+            potentialPickupItem = null;
+        }
     }
 
     private bool IsActionKeyPressed()
@@ -237,14 +241,19 @@ public class ToolActions : MonoBehaviour
             }
     }
 
-
-
     void HandGrabberAction()
     {
-        BedInteraction bed = potentialPickupItem?.GetComponent<BedInteraction>();
-        FurnitureInteraction furniture = potentialPickupItem?.GetComponent<FurnitureInteraction>(); 
+        // Clear potentialPickupItem if it's no longer active
+        if (potentialPickupItem != null && !potentialPickupItem.activeInHierarchy)
+        {
+            potentialPickupItem = null;
+        }
 
-        if (IsActionButtonHeld())
+        BedInteraction bed = potentialPickupItem?.GetComponent<BedInteraction>();
+        FurnitureInteraction furniture = potentialPickupItem?.GetComponent<FurnitureInteraction>();
+
+        // For beds and furniture, start interaction on press and continue if held
+        if (IsActionKeyPressed())
         {
             if (bed != null)
             {
@@ -254,20 +263,8 @@ public class ToolActions : MonoBehaviour
             {
                 furniture.FixFurniture();
             }
-            else if (heldItem == null && potentialPickupItem != null && potentialPickupItem.CompareTag("Trash"))
-            {
-                // Check if the potential pickup item still exists and is not being destroyed
-                if (potentialPickupItem != null && potentialPickupItem.activeInHierarchy)
-                {
-                    TrashItem trashItem = potentialPickupItem.GetComponent<TrashItem>();
-                    if (trashItem != null && trashItem.IsPickupAllowed())
-                    {
-                        PickUpItem(potentialPickupItem);
-                    }
-                }
-            }
         }
-        else
+        else if (IsActionKeyReleased())
         {
             if (bed != null)
             {
@@ -277,13 +274,18 @@ public class ToolActions : MonoBehaviour
             {
                 furniture.StopFixing();
             }
-            else if (heldItem != null)
-            {
-                DropTrash();
-            }
+        }
+
+        // For trash, pick up on press and drop on release
+        if (IsActionKeyPressed() && heldItem == null && potentialPickupItem != null && potentialPickupItem.CompareTag("Trash"))
+        {
+            PickUpItem(potentialPickupItem);
+        }
+        else if (IsActionKeyReleased() && heldItem != null)
+        {
+            DropTrash();
         }
     }
-
 
 
     void OnTriggerEnter(Collider other)
@@ -305,101 +307,92 @@ public class ToolActions : MonoBehaviour
         }
     }
 
-
     void PickUpItem(GameObject item)
     {
+        // Check if the item is valid and not destroyed
+        if (item == null || !item.activeInHierarchy)
+        {
+            return; // Exit the method if the item is invalid or destroyed
+        }
+
         heldItem = item;
         heldItem.transform.SetParent(toolTransform);
         heldItem.transform.localPosition = new Vector3(0, 0, 10);
 
+        // Disable physics and collider of the held item
         Rigidbody rb = heldItem.GetComponent<Rigidbody>();
         Collider col = heldItem.GetComponent<Collider>();
+        if (rb != null) rb.isKinematic = true;
+        if (col != null) col.enabled = false;
 
-        if (rb != null)
-        {
-            rb.isKinematic = true;
-        }
-        if (col != null)
-        {
-            col.enabled = false; // Disable collider to prevent pushing
-        }
-
+        // Subscribe to the disposal event of the trash item (if it's a trash item)
         TrashItem trashItem = item.GetComponent<TrashItem>();
         if (trashItem != null)
         {
-            trashItem.OnDisposal += HandleTrashDisposal;
+            trashItem.IsHeld = true;
+            trashItem.OnDisposal += () => {
+                if (potentialPickupItem == item) {
+                    potentialPickupItem = null;
+                }
+            };
         }
     }
 
     void HandleTrashDisposal()
     {
-        if (heldItem != null)
-        {
-            heldItem = null;
-            potentialPickupItem = null;
-        }
+    heldItem = null;
+    potentialPickupItem = null;
     }
 
 
     void DropTrash()
     {
-        if (heldItem != null)
+        if (heldItem != null && heldItem.activeInHierarchy)
         {
             Rigidbody rb = heldItem.GetComponent<Rigidbody>();
             Collider col = heldItem.GetComponent<Collider>();
 
-            if (rb != null)
-            {
-                rb.isKinematic = false; // Re-enable physics
-            }
-            if (col != null)
-            {
-                col.enabled = true; // Re-enable the collider
-            }
+            if (rb != null) rb.isKinematic = false;
+            if (col != null) col.enabled = true;
 
-                    // Unsubscribe from the OnDisposal event
             TrashItem trashItem = heldItem.GetComponent<TrashItem>();
             if (trashItem != null)
             {
-                trashItem.Drop(); // Start the pickup cooldown
+                trashItem.IsHeld = false;
+                trashItem.Drop();
+                trashItem.OnDisposal -= HandleTrashDisposal; // Unsubscribe from the event
             }
 
-            heldItem.transform.SetParent(null); // Release the item
-
-            // Nullify the heldItem reference to avoid accessing it after destruction
+            heldItem.transform.SetParent(null);
             heldItem = null;
         }
+        potentialPickupItem = null;
+    }
 
-    // Also nullify potentialPickupItem to avoid dangling references
-    potentialPickupItem = null;
-}
-
-
-    /*void WateringCanAction() 
+   public void ForceDropItem()
     {
-        if (IsActionButtonHeld() && currentWaterLevel > 0) 
+        if (heldItem != null)
         {
-
-            // Start playing water particle system
-            if (waterParticleSystem != null) // Check if waterParticleSystem is assigned
+            // Ensure any cleanup or state reset related to dropping the item is done here
+            TrashItem trashItem = heldItem.GetComponent<TrashItem>();
+            if (trashItem != null)
             {
-                waterParticleSystem.Play();
-                waterLevelSlider.gameObject.SetActive(true);
-                PerformWateringRaycasts();
-                Debug.Log("Watering can is on.");
+                trashItem.IsHeld = false;
+                trashItem.Drop();
+                trashItem.OnDisposal -= HandleTrashDisposal;
             }
-        } 
-        else 
-        {
-            // Stop playing water particle system
-            if (waterParticleSystem != null) // Check if waterParticleSystem is assigned
-            {
-                waterParticleSystem.Stop();
-                waterLevelSlider.gameObject.SetActive(false);
 
-            }
+            Rigidbody rb = heldItem.GetComponent<Rigidbody>();
+            Collider col = heldItem.GetComponent<Collider>();
+            if (rb != null) rb.isKinematic = false;
+            if (col != null) col.enabled = true;
+
+            heldItem.transform.SetParent(null);
+            heldItem = null;
         }
-    }*/
+        potentialPickupItem = null;
+    }
+    
 
     private void UpdateWaterLevel()
     {
